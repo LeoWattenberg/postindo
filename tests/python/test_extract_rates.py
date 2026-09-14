@@ -8,7 +8,7 @@ from pathlib import Path
 
 from scripts.extract_rates import (
     CACHE_FORMAT_VERSION,
-    EXTRACTOR_VERSION,
+    DOMESTIC_CACHE_EXTRACTOR_VERSION,
     ExtractionError,
     ParsedRow,
     _cache_header_matches,
@@ -94,7 +94,7 @@ class CacheTests(unittest.TestCase):
         header = {
             "record_type": "header",
             "cache_format_version": CACHE_FORMAT_VERSION,
-            "extractor_version": EXTRACTOR_VERSION,
+            "extractor_version": DOMESTIC_CACHE_EXTRACTOR_VERSION,
             "source_sha256": source_hash,
             "page_first": 4,
             "page_last": 4,

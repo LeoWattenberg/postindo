@@ -38,13 +38,29 @@ EXPECTED_TARIFF_SERVICES = {
     "parcel_over_2kg_to_3kg",
     "parcel_each_additional_kg",
 }
+EXPECTED_INTERNATIONAL_TARIFF_SERVICES = {
+    "letter_printed_matter_small_packet_up_to_20g",
+    "letter_printed_matter_small_packet_over_20g_to_50g",
+    "letter_printed_matter_small_packet_over_50g_to_100g",
+    "letter_printed_matter_small_packet_over_100g_to_250g",
+    "letter_printed_matter_small_packet_over_250g_to_500g",
+    "letter_printed_matter_small_packet_over_500g_to_1000g",
+    "letter_printed_matter_small_packet_over_1000g_to_1500g",
+    "letter_printed_matter_small_packet_over_1500g_to_2000g",
+    "postcard",
+    "sekogram_up_to_7kg",
+    "m_bag_per_kg_up_to_30kg",
+    "parcel_up_to_3kg_usd_cents",
+    "parcel_each_additional_kg_usd_cents",
+}
 
 
 class DocumentParser(HTMLParser):
     """Kumpulkan tautan serta bentuk tabel tarif tanpa membangun DOM."""
 
-    def __init__(self) -> None:
+    def __init__(self, expected_services: set[str] | None = None) -> None:
         super().__init__(convert_charrefs=True)
+        self.expected_services = expected_services or EXPECTED_TARIFF_SERVICES
         self.ids: set[str] = set()
         self.links: list[str] = []
         self.resources: list[str] = []
@@ -60,7 +76,7 @@ class DocumentParser(HTMLParser):
     def _finish_rate_row(self) -> None:
         if self._rate_row_cells is None:
             return
-        if self._rate_row_cells != len(EXPECTED_TARIFF_SERVICES):
+        if self._rate_row_cells != len(self.expected_services):
             # A few examples are enough for a useful diagnostic while keeping
             # malformed, very large pages bounded in memory.
             if len(self.invalid_rate_rows) < 5:
@@ -147,6 +163,7 @@ def parse_args() -> argparse.Namespace:
         help="Base path publik (default: BASE_PATH atau /)",
     )
     parser.add_argument("--expected-locations", type=int, default=603)
+    parser.add_argument("--expected-international-rates", type=int, default=236)
     parser.add_argument("--max-total-mib", type=float, default=300.0)
     parser.add_argument("--max-page-gzip-kib", type=float, default=50.0)
     parser.add_argument("--max-css-gzip-kib", type=float, default=10.0)
@@ -236,6 +253,52 @@ def format_size(value: int) -> str:
     return f"{value / 1024:.1f} KiB"
 
 
+def append_rate_table_errors(
+    errors: list[str],
+    relative: PurePosixPath,
+    parser: DocumentParser,
+    expected_rows: int,
+    expected_services: set[str],
+    row_label: str,
+) -> None:
+    if parser.rate_table_count != 1:
+        errors.append(
+            f"{relative}: memuat {parser.rate_table_count} tabel tarif; seharusnya 1"
+        )
+    if parser.rate_route_rows != expected_rows:
+        errors.append(
+            f"{relative}: memuat {parser.rate_route_rows} {row_label}; "
+            f"seharusnya {expected_rows}"
+        )
+
+    actual_services = set(parser.rate_service_headers)
+    if (
+        len(parser.rate_service_headers) != len(expected_services)
+        or actual_services != expected_services
+    ):
+        missing = sorted(expected_services - actual_services)
+        unexpected = sorted(actual_services - expected_services)
+        details = [
+            f"{len(parser.rate_service_headers)} kolom tarif; seharusnya "
+            f"{len(expected_services)}"
+        ]
+        if missing:
+            details.append("hilang: " + ", ".join(missing))
+        if unexpected:
+            details.append("tidak dikenal: " + ", ".join(unexpected))
+        errors.append(f"{relative}: " + "; ".join(details))
+
+    if parser.invalid_rate_rows:
+        examples = ", ".join(
+            f"baris {row} ({cells} sel tarif)"
+            for row, cells in parser.invalid_rate_rows
+        )
+        errors.append(
+            f"{relative}: setiap {row_label} harus memuat "
+            f"{len(expected_services)} sel tarif; {examples}"
+        )
+
+
 def main() -> int:
     args = parse_args()
     dist = args.dist.resolve()
@@ -260,7 +323,12 @@ def main() -> int:
             f"{args.max_total_mib:g} MiB"
         )
 
-    forbidden_names = {"postindo.sqlite", "locations.csv", "rates.csv"}
+    forbidden_names = {
+        "postindo.sqlite",
+        "locations.csv",
+        "rates.csv",
+        "international_rates.csv",
+    }
     leaked = sorted(path for path in relative_files if path.name in forbidden_names)
     if leaked:
         errors.append("artefak data ikut dipublikasikan: " + ", ".join(map(str, leaked)))
@@ -269,6 +337,7 @@ def main() -> int:
         PurePosixPath("index.html"),
         PurePosixPath("dari/index.html"),
         PurePosixPath("ke/index.html"),
+        PurePosixPath("internasional/index.html"),
         PurePosixPath("tentang/index.html"),
     }
     missing_required = sorted(required - relative_files)
@@ -322,10 +391,16 @@ def main() -> int:
     broken_links: list[str] = []
     remote_resources: list[str] = []
     city_page_set = set(city_pages)
+    international_relative = PurePosixPath("internasional/index.html")
 
     for path in html_files:
         relative = PurePosixPath(path.relative_to(dist).as_posix())
-        parser = DocumentParser()
+        expected_services = (
+            EXPECTED_INTERNATIONAL_TARIFF_SERVICES
+            if relative == international_relative
+            else EXPECTED_TARIFF_SERVICES
+        )
+        parser = DocumentParser(expected_services)
         try:
             parser.feed(path.read_text(encoding="utf-8"))
             parser.close()
@@ -335,42 +410,23 @@ def main() -> int:
         ids_by_file[relative] = parser.ids
 
         if path in city_page_set:
-            if parser.rate_table_count != 1:
-                errors.append(
-                    f"{relative}: memuat {parser.rate_table_count} tabel tarif; seharusnya 1"
-                )
-            if parser.rate_route_rows != args.expected_locations:
-                errors.append(
-                    f"{relative}: memuat {parser.rate_route_rows} baris rute; "
-                    f"seharusnya {args.expected_locations}"
-                )
-
-            actual_services = set(parser.rate_service_headers)
-            if (
-                len(parser.rate_service_headers) != len(EXPECTED_TARIFF_SERVICES)
-                or actual_services != EXPECTED_TARIFF_SERVICES
-            ):
-                missing = sorted(EXPECTED_TARIFF_SERVICES - actual_services)
-                unexpected = sorted(actual_services - EXPECTED_TARIFF_SERVICES)
-                details = [
-                    f"{len(parser.rate_service_headers)} kolom tarif; seharusnya "
-                    f"{len(EXPECTED_TARIFF_SERVICES)}"
-                ]
-                if missing:
-                    details.append("hilang: " + ", ".join(missing))
-                if unexpected:
-                    details.append("tidak dikenal: " + ", ".join(unexpected))
-                errors.append(f"{relative}: " + "; ".join(details))
-
-            if parser.invalid_rate_rows:
-                examples = ", ".join(
-                    f"baris {row} ({cells} sel tarif)"
-                    for row, cells in parser.invalid_rate_rows
-                )
-                errors.append(
-                    f"{relative}: setiap baris rute harus memuat "
-                    f"{len(EXPECTED_TARIFF_SERVICES)} sel tarif; {examples}"
-                )
+            append_rate_table_errors(
+                errors,
+                relative,
+                parser,
+                args.expected_locations,
+                EXPECTED_TARIFF_SERVICES,
+                "baris rute",
+            )
+        elif relative == international_relative:
+            append_rate_table_errors(
+                errors,
+                relative,
+                parser,
+                args.expected_international_rates,
+                EXPECTED_INTERNATIONAL_TARIFF_SERVICES,
+                "baris tujuan internasional",
+            )
 
         for resource in parser.resources:
             parsed = urlsplit(resource)

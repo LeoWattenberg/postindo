@@ -29,7 +29,8 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-filter-root]"))
     }
 
     if (count) {
-      const noun = root.hasAttribute("data-rate-controls") ? "rute" : "wilayah/kantor";
+      const noun = root.dataset.resultNoun
+        ?? (root.hasAttribute("data-rate-controls") ? "rute" : "wilayah/kantor");
       count.textContent = `${visible.toLocaleString("id-ID")} ${noun}`;
     }
     if (empty) empty.hidden = visible !== 0;

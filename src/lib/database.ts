@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
-import type { TariffValues } from "./rates";
+import type { InternationalTariffValues, TariffValues } from "./rates";
 
 export interface Location {
   officeId: string;
@@ -20,10 +20,19 @@ export interface RouteRate extends TariffValues {
   counterpart: Location;
 }
 
+export interface InternationalRate extends InternationalTariffValues {
+  sourceRow: number;
+  sourcePage: number;
+  sourceName: string;
+  countryCode: string;
+  slug: string;
+}
+
 export interface DatabaseStats {
   locations: number;
   rates: number;
   kprk: number;
+  internationalRates: number;
 }
 
 const databasePath = resolve(
@@ -155,13 +164,42 @@ export function getRatesTo(destinationId: string): RouteRate[] {
   return rows.map(mapRoute);
 }
 
+export function getInternationalRates(): InternationalRate[] {
+  return getDatabase()
+    .prepare(`
+      SELECT
+        source_row AS sourceRow,
+        source_page AS sourcePage,
+        source_name AS sourceName,
+        country_code AS countryCode,
+        slug,
+        letter_printed_matter_small_packet_up_to_20g,
+        letter_printed_matter_small_packet_over_20g_to_50g,
+        letter_printed_matter_small_packet_over_50g_to_100g,
+        letter_printed_matter_small_packet_over_100g_to_250g,
+        letter_printed_matter_small_packet_over_250g_to_500g,
+        letter_printed_matter_small_packet_over_500g_to_1000g,
+        letter_printed_matter_small_packet_over_1000g_to_1500g,
+        letter_printed_matter_small_packet_over_1500g_to_2000g,
+        postcard,
+        sekogram_up_to_7kg,
+        m_bag_per_kg_up_to_30kg,
+        parcel_up_to_3kg_usd_cents,
+        parcel_each_additional_kg_usd_cents
+      FROM international_rates
+      ORDER BY source_row
+    `)
+    .all() as unknown as InternationalRate[];
+}
+
 export function getDatabaseStats(): DatabaseStats {
   const row = getDatabase()
     .prepare(`
       SELECT
         (SELECT COUNT(*) FROM locations) AS locations,
         (SELECT COUNT(*) FROM rates) AS rates,
-        (SELECT COUNT(DISTINCT kprk_id) FROM locations) AS kprk
+        (SELECT COUNT(DISTINCT kprk_id) FROM locations) AS kprk,
+        (SELECT COUNT(*) FROM international_rates) AS internationalRates
     `)
     .get() as unknown as DatabaseStats;
   return row;

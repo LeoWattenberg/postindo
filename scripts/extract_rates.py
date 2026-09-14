@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Extract the domestic postage matrix from Kepmen Kominfo No. 222/2022.
+"""Extract domestic and international tariffs from Kepmen Kominfo No. 222/2022.
 
-The public command verifies the source PDF, extracts its text in sequential
-subprocesses, validates the complete 603 by 603 matrix, and only then publishes
-SQLite/CSV/JSON artifacts.  Chunk files are deliberately retained so an
-interrupted extraction can resume without repeating completed PDF pages.
+The public command verifies the source PDF, extracts the text-based domestic
+matrix in sequential subprocesses, OCRs the scanned international table,
+validates both datasets, and only then publishes SQLite/CSV/JSON artifacts.
+Caches are deliberately retained so an interrupted extraction can resume.
 """
 
 from __future__ import annotations
@@ -28,12 +28,36 @@ from typing import Iterable, Iterator, Sequence
 import pypdf
 from pypdf import PdfReader
 
+try:
+    from scripts.extract_international_rates import (
+        INTERNATIONAL_COLUMNS,
+        INTERNATIONAL_PAGE_FIRST,
+        INTERNATIONAL_PAGE_LAST,
+        InternationalExtractionError,
+        InternationalRate,
+        OcrProvenance,
+        prepare_international_rates,
+        validate_international_rows,
+    )
+except ModuleNotFoundError:  # Direct execution: python scripts/extract_rates.py
+    from extract_international_rates import (  # type: ignore[no-redef]
+        INTERNATIONAL_COLUMNS,
+        INTERNATIONAL_PAGE_FIRST,
+        INTERNATIONAL_PAGE_LAST,
+        InternationalExtractionError,
+        InternationalRate,
+        OcrProvenance,
+        prepare_international_rates,
+        validate_international_rows,
+    )
+
 
 EXPECTED_SHA256 = "811d1fb3ac805f172ea7f2d922cc1915b05c63226023bb9c68fc71a66c39bf3d"
 EXPECTED_PYPDF_VERSION = "6.16.2"
-EXTRACTOR_VERSION = "1.0.0"
+EXTRACTOR_VERSION = "1.1.0"
+DOMESTIC_CACHE_EXTRACTOR_VERSION = "1.0.0"
 CACHE_FORMAT_VERSION = 1
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.1.0"
 
 DOMESTIC_PAGE_FIRST = 4
 DOMESTIC_PAGE_LAST = 20_197
@@ -331,7 +355,7 @@ def extract_chunk(
                     {
                         "record_type": "header",
                         "cache_format_version": CACHE_FORMAT_VERSION,
-                        "extractor_version": EXTRACTOR_VERSION,
+                        "extractor_version": DOMESTIC_CACHE_EXTRACTOR_VERSION,
                         "source_sha256": source_sha256,
                         "page_first": page_first,
                         "page_last": page_last,
@@ -382,7 +406,7 @@ def _cache_header_matches(
         if header != {
             "record_type": "header",
             "cache_format_version": CACHE_FORMAT_VERSION,
-            "extractor_version": EXTRACTOR_VERSION,
+            "extractor_version": DOMESTIC_CACHE_EXTRACTOR_VERSION,
             "source_sha256": source_sha256,
             "page_first": page_first,
             "page_last": page_last,
@@ -484,7 +508,7 @@ def iter_cached_rows(
             if (
                 header.get("record_type") != "header"
                 or header.get("cache_format_version") != CACHE_FORMAT_VERSION
-                or header.get("extractor_version") != EXTRACTOR_VERSION
+                or header.get("extractor_version") != DOMESTIC_CACHE_EXTRACTOR_VERSION
                 or header.get("source_sha256") != source_sha256
             ):
                 raise ExtractionError(f"header cache tidak cocok: {path}")
@@ -604,6 +628,38 @@ def _create_schema(connection: sqlite3.Connection) -> None:
 
         CREATE INDEX rates_by_destination
             ON rates(destination_id, origin_id);
+
+        CREATE TABLE international_rates (
+            source_row INTEGER PRIMARY KEY CHECK (source_row BETWEEN 1 AND 236),
+            source_page INTEGER NOT NULL CHECK (source_page BETWEEN 20198 AND 20208),
+            source_name TEXT NOT NULL CHECK (trim(source_name) <> ''),
+            country_code TEXT NOT NULL
+                CHECK (length(country_code) = 2 AND country_code NOT GLOB '*[^A-Z]*'),
+            slug TEXT NOT NULL UNIQUE,
+            letter_printed_matter_small_packet_up_to_20g INTEGER,
+            letter_printed_matter_small_packet_over_20g_to_50g INTEGER,
+            letter_printed_matter_small_packet_over_50g_to_100g INTEGER,
+            letter_printed_matter_small_packet_over_100g_to_250g INTEGER,
+            letter_printed_matter_small_packet_over_250g_to_500g INTEGER,
+            letter_printed_matter_small_packet_over_500g_to_1000g INTEGER,
+            letter_printed_matter_small_packet_over_1000g_to_1500g INTEGER,
+            letter_printed_matter_small_packet_over_1500g_to_2000g INTEGER,
+            postcard INTEGER,
+            sekogram_up_to_7kg INTEGER NOT NULL CHECK (sekogram_up_to_7kg = 0),
+            m_bag_per_kg_up_to_30kg INTEGER,
+            parcel_up_to_3kg_usd_cents INTEGER,
+            parcel_each_additional_kg_usd_cents INTEGER,
+            CHECK (
+                (parcel_up_to_3kg_usd_cents IS NULL
+                 AND parcel_each_additional_kg_usd_cents IS NULL)
+                OR
+                (parcel_up_to_3kg_usd_cents > 0
+                 AND parcel_each_additional_kg_usd_cents > 0)
+            )
+        );
+
+        CREATE INDEX international_rates_by_country_code
+            ON international_rates(country_code, source_row);
         """
     )
 
@@ -650,6 +706,8 @@ def _validate_first_block_origin(
 
 def validate_and_build(
     chunk_paths: Sequence[Path],
+    international_rows: Sequence[InternationalRate],
+    ocr_provenance: OcrProvenance,
     output_dir: Path,
     input_path: Path,
     source_sha256: str,
@@ -663,6 +721,7 @@ def validate_and_build(
         sqlite_path = staging / "postindo.sqlite"
         locations_csv_path = staging / "locations.csv"
         rates_csv_path = staging / "rates.csv"
+        international_csv_path = staging / "international_rates.csv"
         manifest_path = staging / "manifest.json"
 
         connection = sqlite3.connect(sqlite_path)
@@ -798,6 +857,24 @@ def validate_and_build(
                     f"jumlah rute ke diri sendiri salah: {self_routes}"
                 )
 
+            international_counts = validate_international_rows(
+                international_rows, source_sha256=source_sha256
+            )
+            placeholders = ",".join("?" for _ in INTERNATIONAL_COLUMNS)
+            connection.executemany(
+                f"INSERT INTO international_rates ({','.join(INTERNATIONAL_COLUMNS)}) "
+                f"VALUES ({placeholders})",
+                [row.values() for row in international_rows],
+            )
+            with international_csv_path.open(
+                "w", encoding="utf-8", newline=""
+            ) as international_handle:
+                international_writer = csv.writer(
+                    international_handle, lineterminator="\n"
+                )
+                international_writer.writerow(INTERNATIONAL_COLUMNS)
+                international_writer.writerows(row.values() for row in international_rows)
+
             anchor_query = f"""
                 SELECT r.source_row, r.source_page,
                        r.origin_id, origin.source_name, origin.kprk_id,
@@ -829,11 +906,43 @@ def validate_and_build(
                 "source_pdf_pages": str(pdf_page_count),
                 "domestic_page_first": str(DOMESTIC_PAGE_FIRST),
                 "domestic_page_last": str(DOMESTIC_PAGE_LAST),
+                "international_page_first": str(INTERNATIONAL_PAGE_FIRST),
+                "international_page_last": str(INTERNATIONAL_PAGE_LAST),
                 "locations_count": str(EXPECTED_LOCATION_COUNT),
                 "rates_count": str(EXPECTED_RATE_COUNT),
                 "kprk_ids_count": str(kprk_count),
                 "alphanumeric_office_ids_count": str(alphanumeric_count),
                 "self_routes_count": str(self_routes),
+                **{
+                    f"{key}_count": str(value)
+                    for key, value in international_counts.items()
+                },
+                "international_ocr_engine": ocr_provenance.engine,
+                "international_ocr_version": ocr_provenance.version,
+                "international_ocr_extractor_version": ocr_provenance.extractor_version,
+                "international_ocr_language": ocr_provenance.language,
+                "international_ocr_page_segmentation_mode": str(
+                    ocr_provenance.page_segmentation_mode
+                ),
+                "international_ocr_whole_page_passes": ",".join(
+                    ocr_provenance.whole_page_passes
+                ),
+                "international_ocr_cell_fallback_passes": ",".join(
+                    ocr_provenance.cell_fallback_passes
+                ),
+                "international_ocr_identity_passes": ",".join(
+                    ocr_provenance.identity_passes
+                ),
+                "international_ocr_reviewed_numeric_cells": str(
+                    ocr_provenance.reviewed_numeric_cells
+                ),
+                "international_ocr_reviewed_identity_cells": str(
+                    ocr_provenance.reviewed_identity_cells
+                ),
+                "international_ocr_source_layer": ocr_provenance.source_layer,
+                "international_ocr_rotation_degrees": str(
+                    ocr_provenance.rotation_degrees
+                ),
                 "generated_at": generated_at,
             }
             connection.executemany(
@@ -851,7 +960,12 @@ def validate_and_build(
 
         artifacts = {
             path.name: _artifact_details(path)
-            for path in (sqlite_path, locations_csv_path, rates_csv_path)
+            for path in (
+                sqlite_path,
+                locations_csv_path,
+                rates_csv_path,
+                international_csv_path,
+            )
         }
         manifest: dict[str, object] = {
             "schema_version": SCHEMA_VERSION,
@@ -866,6 +980,10 @@ def validate_and_build(
                     "first": DOMESTIC_PAGE_FIRST,
                     "last": DOMESTIC_PAGE_LAST,
                 },
+                "international_pdf_pages": {
+                    "first": INTERNATIONAL_PAGE_FIRST,
+                    "last": INTERNATIONAL_PAGE_LAST,
+                },
             },
             "counts": {
                 "locations": EXPECTED_LOCATION_COUNT,
@@ -873,7 +991,9 @@ def validate_and_build(
                 "kprk_ids": EXPECTED_KPRK_COUNT,
                 "alphanumeric_office_ids": EXPECTED_ALPHANUMERIC_OFFICE_COUNT,
                 "self_routes": EXPECTED_LOCATION_COUNT,
+                **international_counts,
             },
+            "ocr": asdict(ocr_provenance),
             "artifacts": artifacts,
         }
         with manifest_path.open("w", encoding="utf-8", newline="\n") as handle:
@@ -883,7 +1003,12 @@ def validate_and_build(
             os.fsync(handle.fileno())
 
         # The manifest is the completion marker and is therefore replaced last.
-        for filename in ("postindo.sqlite", "locations.csv", "rates.csv"):
+        for filename in (
+            "postindo.sqlite",
+            "locations.csv",
+            "rates.csv",
+            "international_rates.csv",
+        ):
             os.replace(staging / filename, output_dir / filename)
         os.replace(manifest_path, output_dir / "manifest.json")
         return manifest
@@ -891,7 +1016,7 @@ def validate_and_build(
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Konversi lampiran tarif domestik Kepmen Kominfo 222/2022"
+        description="Konversi tarif domestik dan internasional Kepmen Kominfo 222/2022"
     )
     parser.add_argument("--input", required=True, type=Path, help="berkas PDF sumber")
     parser.add_argument(
@@ -904,6 +1029,11 @@ def _parser() -> argparse.ArgumentParser:
         "--allow-unverified-source",
         action="store_true",
         help="izinkan SHA-256 sumber yang berbeda (validasi struktur tetap dijalankan)",
+    )
+    parser.add_argument(
+        "--tesseract-command",
+        default="tesseract",
+        help="nama/path executable Tesseract untuk lampiran internasional",
     )
     parser.add_argument("--_extract-chunk", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--_count-pages", action="store_true", help=argparse.SUPPRESS)
@@ -959,9 +1089,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"Diharapkan: {EXPECTED_SHA256}\nDitemukan: {source_sha256}"
             )
         pdf_page_count = get_pdf_page_count(input_path)
-        if pdf_page_count < DOMESTIC_PAGE_LAST:
+        if pdf_page_count < INTERNATIONAL_PAGE_LAST:
             raise ExtractionError(
-                f"PDF hanya memiliki {pdf_page_count} halaman; perlu halaman {DOMESTIC_PAGE_LAST}"
+                f"PDF hanya memiliki {pdf_page_count} halaman; perlu halaman "
+                f"{INTERNATIONAL_PAGE_LAST}"
             )
         output_dir = args.output_dir.expanduser().resolve()
         print(
@@ -970,18 +1101,37 @@ def main(argv: Sequence[str] | None = None) -> int:
             flush=True,
         )
         chunks = prepare_chunks(input_path, output_dir, source_sha256, args.chunk_pages)
+        international_rows, ocr_provenance = prepare_international_rates(
+            input_path,
+            output_dir / ".extract-cache",
+            source_sha256,
+            args.tesseract_command,
+        )
         print("Memvalidasi matriks lengkap dan menulis artefak...", flush=True)
         manifest = validate_and_build(
-            chunks, output_dir, input_path, source_sha256, pdf_page_count
+            chunks,
+            international_rows,
+            ocr_provenance,
+            output_dir,
+            input_path,
+            source_sha256,
+            pdf_page_count,
         )
         counts = manifest["counts"]
         assert isinstance(counts, dict)
         print(
-            f"Selesai: {counts['locations']:,} lokasi, {counts['rates']:,} rute -> {output_dir}",
+            f"Selesai: {counts['locations']:,} lokasi, {counts['rates']:,} rute domestik, "
+            f"{counts['international_rates']:,} tarif internasional -> {output_dir}",
             flush=True,
         )
         return 0
-    except (ExtractionError, OSError, sqlite3.Error, subprocess.CalledProcessError) as error:
+    except (
+        ExtractionError,
+        InternationalExtractionError,
+        OSError,
+        sqlite3.Error,
+        subprocess.CalledProcessError,
+    ) as error:
         print(f"Gagal: {error}", file=sys.stderr, flush=True)
         return 1
 

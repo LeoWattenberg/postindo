@@ -6,7 +6,12 @@ import tempfile
 import unittest
 from pathlib import Path, PurePosixPath
 
-from scripts.check_dist import EXPECTED_TARIFF_SERVICES, DocumentParser, target_file
+from scripts.check_dist import (
+    EXPECTED_INTERNATIONAL_TARIFF_SERVICES,
+    EXPECTED_TARIFF_SERVICES,
+    DocumentParser,
+    target_file,
+)
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -37,11 +42,29 @@ def rate_table(
     )
 
 
+def international_rate_table(*, rows: int = 1, cells_per_row: int = 13) -> str:
+    headers = "".join(
+        f'<th scope="col" data-service="{service}">{service}</th>'
+        for service in sorted(EXPECTED_INTERNATIONAL_TARIFF_SERVICES)
+    )
+    body = "".join(
+        f'<tr id="country-{index}"><th scope="row">A</th>'
+        + "<td>Rp1.000</td>" * cells_per_row
+        + "</tr>"
+        for index in range(rows)
+    )
+    return (
+        '<table data-rate-table><thead><tr><th scope="col">Negara</th>'
+        f"{headers}</tr></thead><tbody>{body}</tbody></table>"
+    )
+
+
 def write_fixture(dist: Path, *, from_table: str, to_table: str) -> None:
     documents = {
         "index.html": '<a href="/postindo/dari/a-1/">Dari</a>',
         "dari/index.html": '<a href="/postindo/dari/a-1/">A</a>',
         "ke/index.html": '<a href="/postindo/ke/a-1/">A</a>',
+        "internasional/index.html": international_rate_table(),
         "tentang/index.html": '<a href="https://example.test/source">Sumber</a>',
         "dari/a-1/index.html": (
             f'{from_table}<div id="ke-1"></div>'
@@ -107,6 +130,19 @@ class StaticOutputCheckTests(unittest.TestCase):
         self.assertEqual(set(parser.rate_service_headers), EXPECTED_TARIFF_SERVICES)
         self.assertEqual(parser.invalid_rate_rows, [])
 
+    def test_streaming_parser_counts_international_rate_shape(self) -> None:
+        parser = DocumentParser(EXPECTED_INTERNATIONAL_TARIFF_SERVICES)
+        parser.feed(international_rate_table(rows=2))
+        parser.close()
+
+        self.assertEqual(parser.rate_table_count, 1)
+        self.assertEqual(parser.rate_route_rows, 2)
+        self.assertEqual(
+            set(parser.rate_service_headers),
+            EXPECTED_INTERNATIONAL_TARIFF_SERVICES,
+        )
+        self.assertEqual(parser.invalid_rate_rows, [])
+
     def test_accepts_small_complete_fixture(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             dist = Path(temporary)
@@ -125,6 +161,8 @@ class StaticOutputCheckTests(unittest.TestCase):
                     "--base",
                     "/postindo",
                     "--expected-locations",
+                    "1",
+                    "--expected-international-rates",
                     "1",
                 ],
                 check=False,
@@ -157,6 +195,8 @@ class StaticOutputCheckTests(unittest.TestCase):
                     "/postindo",
                     "--expected-locations",
                     "1",
+                    "--expected-international-rates",
+                    "1",
                 ],
                 check=False,
                 capture_output=True,
@@ -167,6 +207,39 @@ class StaticOutputCheckTests(unittest.TestCase):
         self.assertIn("memuat 2 baris rute; seharusnya 1", result.stderr)
         self.assertIn("9 kolom tarif; seharusnya 10", result.stderr)
         self.assertIn("9 sel tarif", result.stderr)
+
+    def test_rejects_leaked_international_csv(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            dist = Path(temporary)
+            write_fixture(
+                dist,
+                from_table=rate_table("ke"),
+                to_table=rate_table("dari"),
+            )
+            (dist / "international_rates.csv").write_text(
+                "source_row,source_name\n1,Afghanistan\n", encoding="utf-8"
+            )
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(CHECK_DIST),
+                    "--dist",
+                    str(dist),
+                    "--base",
+                    "/postindo",
+                    "--expected-locations",
+                    "1",
+                    "--expected-international-rates",
+                    "1",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("international_rates.csv", result.stderr)
 
 
 if __name__ == "__main__":

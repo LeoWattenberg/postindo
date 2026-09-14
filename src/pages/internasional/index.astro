@@ -1,0 +1,105 @@
+---
+import { getInternationalRates } from "../../lib/database";
+import { sitePath } from "../../lib/paths";
+import {
+  formatInternationalTariff,
+  INTERNATIONAL_SERVICE_DEFINITIONS,
+} from "../../lib/rates";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const rates = getInternationalRates();
+---
+
+<BaseLayout
+  title="Tarif internasional"
+  description="Cari tarif Layanan Pos Universal dari Indonesia ke negara dan tujuan internasional."
+>
+  <nav class="breadcrumbs" aria-label="Jejak navigasi">
+    <a href={sitePath("/")}>Beranda</a>
+    <span aria-hidden="true">/</span>
+    <span>Internasional</span>
+  </nav>
+
+  <header class="page-heading">
+    <p class="eyebrow">Dari Indonesia ke luar negeri</p>
+    <h1>Tarif pos internasional</h1>
+    <p>
+      Cari negara atau tujuan, lalu pilih jenis kiriman. Tarif surat, barang cetakan,
+      bungkusan kecil, kartupos, sekogram, dan M-Bag ditampilkan dalam rupiah; tarif paket
+      ditampilkan dalam dolar AS.
+    </p>
+  </header>
+
+  <section
+    class="rates"
+    data-filter-root
+    data-rate-controls
+    data-result-noun="negara/tujuan"
+  >
+    <div class="rate-tools">
+      <div>
+        <label for="cari-negara">Cari negara/tujuan</label>
+        <input
+          id="cari-negara"
+          type="search"
+          inputmode="search"
+          autocomplete="off"
+          placeholder="Nama negara atau kode"
+          data-filter-input
+        />
+      </div>
+      <div class="service-picker">
+        <label for="pilih-layanan-internasional">Jenis kiriman</label>
+        <select id="pilih-layanan-internasional" data-service-select>
+          {INTERNATIONAL_SERVICE_DEFINITIONS.map((service, index) => (
+            <option value={service.key} selected={index === 0}>{service.label}</option>
+          ))}
+        </select>
+      </div>
+      <p class="result-count" aria-live="polite" data-result-count>
+        {rates.length.toLocaleString("id-ID")} negara/tujuan
+      </p>
+    </div>
+
+    <noscript>
+      <p class="notice">
+        JavaScript tidak aktif. Semua jenis kiriman tetap tersedia; geser tabel ke samping
+        untuk membacanya.
+      </p>
+    </noscript>
+
+    <div class="table-scroll" tabindex="0" aria-label="Tabel tarif dapat digeser ke samping">
+      <table class="rate-table international-table" data-rate-table data-column="2">
+        <caption>Tarif pos dari Indonesia ke negara dan tujuan internasional</caption>
+        <thead>
+          <tr>
+            <th scope="col">Negara/tujuan</th>
+            {INTERNATIONAL_SERVICE_DEFINITIONS.map((service) => (
+              <th
+                scope="col"
+                data-service={service.key}
+                title={service.description}
+              >
+                {service.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody data-filter-list>
+          {rates.map((rate) => (
+            <tr id={rate.slug}>
+              <th scope="row">
+                <strong>{rate.sourceName}</strong>
+                <small>Kode {rate.countryCode}</small>
+              </th>
+              {INTERNATIONAL_SERVICE_DEFINITIONS.map((service) => (
+                <td>{formatInternationalTariff(service.key, rate[service.key])}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+    <p class="empty-state" data-empty-state hidden>Tidak ada negara/tujuan yang cocok.</p>
+  </section>
+</BaseLayout>

@@ -8,10 +8,10 @@ const locations = getLocations();
 
 <BaseLayout
   title="PostIndo"
-  description="Cari tarif Layanan Pos Universal dari dan ke 603 wilayah/kantor di Indonesia."
+  description="Cari tarif Layanan Pos Universal domestik dan internasional dari Indonesia."
 >
   <section class="hero">
-    <p class="eyebrow">Tarif pos domestik</p>
+    <p class="eyebrow">Tarif Layanan Pos Universal</p>
     <h1>Cari tarif pos antardaerah tanpa membolak-balik PDF</h1>
     <p>
       Pilih kantor asal dan tujuan untuk langsung membuka rute dalam daftar resmi.
@@ -76,6 +76,10 @@ const locations = getLocations();
       <a class="feature-card" href={sitePath("/ke/")}>
         <strong>Tarif ke suatu wilayah</strong>
         <span>Pilih tujuan, lalu lihat tarif dari semua asal.</span>
+      </a>
+      <a class="feature-card" href={sitePath("/internasional/")}>
+        <strong>Tarif internasional</strong>
+        <span>Cari tarif kiriman dan paket dari Indonesia ke luar negeri.</span>
       </a>
     </div>
   </section>

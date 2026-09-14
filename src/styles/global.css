@@ -321,6 +321,10 @@ button:hover {
   font-variant-numeric: tabular-nums;
 }
 
+.international-table {
+  min-width: 112rem;
+}
+
 .rate-table caption {
   position: absolute;
   width: 1px;
@@ -422,7 +426,10 @@ button:hover {
   .rate-table[data-column="8"] tr > :nth-child(8),
   .rate-table[data-column="9"] tr > :nth-child(9),
   .rate-table[data-column="10"] tr > :nth-child(10),
-  .rate-table[data-column="11"] tr > :nth-child(11) {
+  .rate-table[data-column="11"] tr > :nth-child(11),
+  .rate-table[data-column="12"] tr > :nth-child(12),
+  .rate-table[data-column="13"] tr > :nth-child(13),
+  .rate-table[data-column="14"] tr > :nth-child(14) {
     display: table-cell;
   }
 }
