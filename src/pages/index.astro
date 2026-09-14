@@ -1,6 +1,7 @@
 ---
 import { getLocations } from "../lib/database";
 import { sitePath } from "../lib/paths";
+import { SERVICE_DEFINITIONS } from "../lib/rates";
 import BaseLayout from "../layouts/BaseLayout.astro";
 
 const locations = getLocations();
@@ -14,7 +15,7 @@ const locations = getLocations();
     <p class="eyebrow">Tarif Layanan Pos Universal</p>
     <h1>Cari tarif pos antardaerah tanpa membolak-balik PDF</h1>
     <p>
-      Pilih kantor asal dan tujuan untuk langsung membuka rute dalam daftar resmi.
+      Pilih kantor asal, tujuan, dan jenis kiriman untuk langsung membuka tarif yang tepat.
     </p>
   </section>
 
@@ -47,14 +48,21 @@ const locations = getLocations();
         ))}
       </select>
     </div>
+    <div>
+      <label for="layanan">Jenis/berat kiriman</label>
+      <select id="layanan" name="layanan" data-route-service-select>
+        {SERVICE_DEFINITIONS.map((service, index) => (
+          <option value={service.key} selected={index === 0}>
+            {service.label}
+          </option>
+        ))}
+      </select>
+    </div>
     <p class="form-error" data-route-finder-error hidden>
       Pilih kantor asal dan tujuan terlebih dahulu.
     </p>
     <div class="finder-actions">
-      <button type="submit" name="arah" value="dari">Lihat dari asal</button>
-      <button class="button-secondary" type="submit" name="arah" value="ke">
-        Lihat dari tujuan
-      </button>
+      <button type="submit">Lihat dari asal</button>
     </div>
   </form>
 

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("menemukan rute, mengganti layanan, dan membuka indeks sebaliknya", async ({ page }) => {
+test("menemukan rute dengan layanan pilihan dan membuka indeks sebaliknya", async ({ page }) => {
   await page.goto("./");
 
   await expect(page).toHaveTitle("ongkirstempel");
@@ -28,18 +28,29 @@ test("menemukan rute, mengganti layanan, dan membuka indeks sebaliknya", async (
 
   await page.locator("[data-origin-select]").selectOption({ index: 1 });
   await page.locator("[data-destination-select]").selectOption({ index: 2 });
+  const homeServiceSelect = page.locator("[data-route-service-select]");
+  await expect(homeServiceSelect.locator("option")).toHaveCount(10);
+  await homeServiceSelect.selectOption("letter_over_100g_to_250g");
+  await expect(page.getByRole("button", { name: "Lihat dari tujuan" })).toHaveCount(0);
   await page.getByRole("button", { name: "Lihat dari asal" }).click();
 
-  await expect(page).toHaveURL(new RegExp(`#ke-${destinationId}$`));
+  await expect(page).toHaveURL(
+    new RegExp(`\\?layanan=letter_over_100g_to_250g#ke-${destinationId}$`),
+  );
   const route = page.locator(`[id="ke-${destinationId}"]`);
   await expect(route).toBeVisible();
 
   const defaultCell = route.locator("td").nth(0);
+  const serviceSelect = page.locator("[data-service-select]");
+  await expect(serviceSelect).toHaveValue("letter_over_100g_to_250g");
+  await expect(route.locator("td").nth(1)).toBeVisible();
+  await expect(defaultCell).toBeHidden();
+
+  await serviceSelect.selectOption("letter_up_to_100g");
   await expect(defaultCell).toBeVisible();
   await expect(defaultCell).toHaveText(/^Rp[\d.]+$/);
   const mirroredValue = await defaultCell.innerText();
 
-  const serviceSelect = page.locator("[data-service-select]");
   const serviceCount = await serviceSelect.locator("option").count();
   expect(serviceCount).toBe(10);
   for (let serviceIndex = 0; serviceIndex < serviceCount; serviceIndex += 1) {

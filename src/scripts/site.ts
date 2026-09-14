@@ -50,6 +50,14 @@ for (const controls of document.querySelectorAll<HTMLElement>("[data-rate-contro
   const table = controls.querySelector<HTMLElement>("[data-rate-table]");
   if (!select || !table) continue;
 
+  const requestedService = new URLSearchParams(window.location.search).get("layanan");
+  if (
+    requestedService &&
+    [...select.options].some((option) => option.value === requestedService)
+  ) {
+    select.value = requestedService;
+  }
+
   const showService = (): void => {
     table.dataset.column = String(select.selectedIndex + 2);
   };
@@ -64,6 +72,7 @@ if (finder) {
     event.preventDefault();
     const origin = finder.querySelector<HTMLSelectElement>("[data-origin-select]");
     const destination = finder.querySelector<HTMLSelectElement>("[data-destination-select]");
+    const service = finder.querySelector<HTMLSelectElement>("[data-route-service-select]");
     const error = finder.querySelector<HTMLElement>("[data-route-finder-error]");
     const originOption = origin?.selectedOptions.item(0);
     const destinationOption = destination?.selectedOptions.item(0);
@@ -75,11 +84,9 @@ if (finder) {
     }
 
     if (error) error.hidden = true;
-    const submitter = (event as SubmitEvent).submitter as HTMLButtonElement | null;
-    const viewFromDestination = submitter?.value === "ke";
-    const url = viewFromDestination
-      ? `${destination.value}#dari-${encodeURIComponent(originOption.dataset.officeId ?? "")}`
-      : `${origin.value}#ke-${encodeURIComponent(destinationOption.dataset.officeId ?? "")}`;
-    window.location.assign(url);
+    const url = new URL(origin.value, window.location.href);
+    if (service?.value) url.searchParams.set("layanan", service.value);
+    url.hash = `ke-${encodeURIComponent(destinationOption.dataset.officeId ?? "")}`;
+    window.location.assign(url.href);
   });
 }
