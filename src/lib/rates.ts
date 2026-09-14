@@ -1,28 +1,28 @@
 export const SERVICE_DEFINITIONS = [
   {
     key: "letter_up_to_100g",
-    label: "Surat ≤100 g",
-    description: "Surat sampai dengan 100 gram",
+    label: "Kiriman ≤100 g",
+    description: "Surat, barang cetakan, dan bungkusan kecil sampai dengan 100 gram",
   },
   {
     key: "letter_over_100g_to_250g",
-    label: "Surat >100–250 g",
-    description: "Surat di atas 100 sampai dengan 250 gram",
+    label: "Kiriman >100–250 g",
+    description: "Surat, barang cetakan, dan bungkusan kecil di atas 100 sampai dengan 250 gram",
   },
   {
     key: "letter_over_250g_to_500g",
-    label: "Surat >250–500 g",
-    description: "Surat di atas 250 sampai dengan 500 gram",
+    label: "Kiriman >250–500 g",
+    description: "Surat, barang cetakan, dan bungkusan kecil di atas 250 sampai dengan 500 gram",
   },
   {
     key: "letter_over_500g_to_1000g",
-    label: "Surat >500–1.000 g",
-    description: "Surat di atas 500 sampai dengan 1.000 gram",
+    label: "Kiriman >500–1.000 g",
+    description: "Surat, barang cetakan, dan bungkusan kecil di atas 500 sampai dengan 1.000 gram",
   },
   {
     key: "letter_over_1000g_to_2000g",
-    label: "Surat >1.000–2.000 g",
-    description: "Surat di atas 1.000 sampai dengan 2.000 gram",
+    label: "Kiriman >1.000–2.000 g",
+    description: "Surat, barang cetakan, dan bungkusan kecil di atas 1.000 sampai dengan 2.000 gram",
   },
   {
     key: "postcard",
@@ -31,13 +31,13 @@ export const SERVICE_DEFINITIONS = [
   },
   {
     key: "sekogram",
-    label: "Sekogram",
-    description: "Sekogram (bebas biaya)",
+    label: "Sekogram ≤7 kg",
+    description: "Sekogram sampai dengan 7 kilogram (bebas biaya)",
   },
   {
     key: "m_bag_per_kg",
-    label: "M-Bag per kg",
-    description: "M-Bag per kilogram",
+    label: "M-Bag per kg ≤30 kg",
+    description: "M-Bag per kilogram sampai dengan 30 kilogram",
   },
   {
     key: "parcel_over_2kg_to_3kg",

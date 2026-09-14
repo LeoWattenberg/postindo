@@ -9,8 +9,8 @@ ongkirstempel mengubah lampiran tarif kiriman domestik dan internasional Indones
 - Lampiran domestik berbasis teks pada halaman PDF 4–20.197.
 - 603 wilayah/kantor (`KAB/KOTA/KEC`) dan 205 KPRK.
 - 363.609 rute berarah (603 × 603), termasuk rute menuju wilayah yang sama.
-- Lima kelompok berat surat, kartu pos, sekogram, M-Bag, paket 2–3 kg, dan tambahan setiap kg paket.
-- Nilai tarif disimpan sebagai bilangan bulat rupiah. `sekogram` bernilai `0` di basis data dan ditampilkan sebagai **Bebas Biaya**.
+- Lima kelompok berat surat/barang cetakan/bungkusan kecil, kartu pos, sekogram sampai 7 kg, M-Bag per kg sampai 30 kg, paket 2–3 kg, dan tambahan setiap kg paket.
+- Nilai tarif disimpan sebagai bilangan bulat rupiah. `sekogram` bernilai `0` di basis data dan ditampilkan sebagai **Bebas Biaya** sampai batas 7 kg pada sumber.
 - Lampiran internasional hasil pindai pada halaman PDF 20.198–20.208, dengan 236 baris negara tujuan.
 - Delapan kelompok berat surat/barang cetakan/bungkusan kecil, kartu pos, sekogram sampai 7 kg, M-Bag sampai 30 kg, dan paket pos internasional.
 - Tarif internasional selain paket disimpan sebagai integer rupiah; tarif paket disimpan sebagai integer sen dolar AS agar tidak memakai floating point. Tanda `-` pada sumber disimpan sebagai `NULL`.
@@ -89,7 +89,7 @@ SQLite berisi empat tabel publik:
 
 - `metadata(key, value)` menyimpan metadata generasi dan sumber.
 - `locations(office_id, source_name, kprk_id, ordinal, slug)` menyimpan ID sebagai teks, termasuk ID berhuruf seperti `B1`.
-- `rates(source_row, source_page, origin_id, destination_id, letter_up_to_100g, letter_over_100g_to_250g, letter_over_250g_to_500g, letter_over_500g_to_1000g, letter_over_1000g_to_2000g, postcard, sekogram, m_bag_per_kg, parcel_over_2kg_to_3kg, parcel_each_additional_kg)` menyimpan seluruh tarif sebagai integer rupiah.
+- `rates(source_row, source_page, origin_id, destination_id, letter_up_to_100g, letter_over_100g_to_250g, letter_over_250g_to_500g, letter_over_500g_to_1000g, letter_over_1000g_to_2000g, postcard, sekogram, m_bag_per_kg, parcel_over_2kg_to_3kg, parcel_each_additional_kg)` menyimpan seluruh tarif sebagai integer rupiah. Lima kolom `letter_*` berlaku untuk satu kelompok sumber: surat, barang cetakan, dan bungkusan kecil. `sekogram` berlaku sampai 7 kg dan `m_bag_per_kg` sampai 30 kg.
 - `international_rates(source_row, source_page, source_name, country_code, slug, letter_printed_matter_small_packet_up_to_20g, letter_printed_matter_small_packet_over_20g_to_50g, letter_printed_matter_small_packet_over_50g_to_100g, letter_printed_matter_small_packet_over_100g_to_250g, letter_printed_matter_small_packet_over_250g_to_500g, letter_printed_matter_small_packet_over_500g_to_1000g, letter_printed_matter_small_packet_over_1000g_to_1500g, letter_printed_matter_small_packet_over_1500g_to_2000g, postcard, sekogram_up_to_7kg, m_bag_per_kg_up_to_30kg, parcel_up_to_3kg_usd_cents, parcel_each_additional_kg_usd_cents)` menyimpan satu baris per nomor negara tujuan. Delapan kolom `letter_printed_matter_small_packet_*` mengikuti tepat satu kelompok judul sumber: surat, barang cetakan, dan bungkusan kecil.
 
 Pasangan `(origin_id, destination_id)` adalah primary key tarif domestik dan tersedia indeks yang diawali `destination_id` untuk build halaman tujuan. `international_rates.source_row` adalah primary key karena kode negara tidak unik pada sumber: `SZ` muncul untuk `Eswatini (Swaziland)` dan `Swaziland`. CSV memakai kolom yang sama, UTF-8, aturan quoting RFC 4180, line ending LF, kolom kosong untuk `NULL`, dan urutan sumber deterministik.
