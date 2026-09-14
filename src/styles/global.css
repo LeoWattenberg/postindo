@@ -410,6 +410,8 @@ button:hover {
   .rate-table tr > :not(:first-child) {
     display: none;
     width: 34%;
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
 
   .rate-table thead th {
