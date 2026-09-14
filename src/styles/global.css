@@ -470,6 +470,10 @@ button:hover {
   margin: 0;
 }
 
+.footer-links {
+  gap: 0.45rem 1rem;
+}
+
 @media (min-width: 42rem) {
   main {
     padding-top: 2.5rem;
@@ -510,6 +514,10 @@ button:hover {
   .footer-inner {
     flex-direction: row;
     justify-content: space-between;
+  }
+
+  .footer-links {
+    justify-content: flex-end;
   }
 }
 

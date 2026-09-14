@@ -1,6 +1,6 @@
-# PostIndo
+# ongkirstempel
 
-PostIndo mengubah lampiran tarif kiriman domestik dan internasional Indonesia menjadi basis data terstruktur dan situs statis yang ringan. Situs menyediakan indeks tarif **dari** setiap wilayah/kantor dan **ke** setiap wilayah/kantor, serta tarif ke negara tujuan luar negeri, tanpa API, pelacak, font eksternal, atau JavaScript framework di peramban.
+ongkirstempel mengubah lampiran tarif kiriman domestik dan internasional Indonesia menjadi basis data terstruktur dan situs statis yang ringan. Situs menyediakan indeks tarif **dari** setiap wilayah/kantor dan **ke** setiap wilayah/kantor, serta tarif ke negara tujuan luar negeri, tanpa API, pelacak, font eksternal, atau JavaScript framework di peramban.
 
 > **Bukan situs resmi Pos Indonesia atau pemerintah.** Data ini merupakan penyajian ulang Keputusan Menteri Komunikasi dan Informatika Nomor 222 Tahun 2022. Periksa status dan tarif yang berlaku pada sumber resmi sebelum mengandalkannya.
 
@@ -120,4 +120,4 @@ Anggaran tersebut menyediakan margin terhadap [batas GitHub Pages](https://docs.
 
 ## Batasan penggunaan
 
-PostIndo melaporkan pita berat yang diterbitkan dalam keputusan, bukan menghitung interpolasi berat, mengonversi tarif dolar AS, atau memberikan penawaran harga komersial Pos Indonesia. Lampiran internasional diperoleh melalui dua pembacaan tabel penuh dan pembacaan ulang sel yang tidak sepakat, memakai model bahasa Tesseract `eng` serta `ind`. Koreksi hasil tinjauan hanya berlaku untuk PDF resmi atau lapisan gambar sumber dengan checksum identik. Hasil akhirnya diperiksa terhadap struktur tabel, jangkar sumber, pola ketersediaan layanan, dan checksum seluruh CSV internasional. Untuk metodologi, sumber, serta peringatan yang tampil kepada pengunjung, buka halaman `/tentang/` pada situs hasil build.
+ongkirstempel melaporkan pita berat yang diterbitkan dalam keputusan, bukan menghitung interpolasi berat, mengonversi tarif dolar AS, atau memberikan penawaran harga komersial Pos Indonesia. Lampiran internasional diperoleh melalui dua pembacaan tabel penuh dan pembacaan ulang sel yang tidak sepakat, memakai model bahasa Tesseract `eng` serta `ind`. Koreksi hasil tinjauan hanya berlaku untuk PDF resmi atau lapisan gambar sumber dengan checksum identik. Hasil akhirnya diperiksa terhadap struktur tabel, jangkar sumber, pola ketersediaan layanan, dan checksum seluruh CSV internasional. Untuk metodologi, sumber, serta peringatan yang tampil kepada pengunjung, buka halaman `/tentang/` pada situs hasil build.

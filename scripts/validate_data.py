@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validasi artefak data PostIndo yang sudah dikomit tanpa membaca PDF sumber."""
+"""Validasi artefak data ongkirstempel yang sudah dikomit tanpa membaca PDF sumber."""
 
 from __future__ import annotations
 

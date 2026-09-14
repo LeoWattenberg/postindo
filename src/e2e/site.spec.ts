@@ -3,6 +3,19 @@ import { expect, test } from "@playwright/test";
 test("menemukan rute, mengganti layanan, dan membuka indeks sebaliknya", async ({ page }) => {
   await page.goto("./");
 
+  await expect(page).toHaveTitle("ongkirstempel");
+  await expect(page.locator(".brand")).toContainText("ongkirstempel");
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute(
+    "href",
+    /\/postindo\/favicon\.svg$/,
+  );
+  await expect(
+    page.locator('footer a[href="https://kw.media/en/website-design-management/"]'),
+  ).toHaveText("Desain dan pengelolaan oleh kw.media");
+  await expect(page.locator('footer a[href="https://kw.media/impressum/"]')).toHaveText(
+    "Impressum",
+  );
+
   const originOptions = page.locator("[data-origin-select] option");
   const destinationOptions = page.locator("[data-destination-select] option");
   expect(await originOptions.count()).toBeGreaterThan(2);
