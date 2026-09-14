@@ -1,0 +1,106 @@
+---
+import type { Location, RouteRate } from "../lib/database";
+import {
+  formatTariff,
+  SERVICE_DEFINITIONS,
+} from "../lib/rates";
+
+interface Props {
+  location: Location;
+  rates: RouteRate[];
+  direction: "from" | "to";
+}
+
+const { location, rates, direction } = Astro.props;
+const isFrom = direction === "from";
+const counterpartLabel = isFrom ? "Tujuan" : "Asal";
+const filterLabel = isFrom ? "tujuan" : "asal";
+const rowPrefix = isFrom ? "ke" : "dari";
+---
+
+<section class="rates" data-filter-root data-rate-controls>
+  <div class="rate-tools">
+    <div>
+      <label for="cari-rute">Cari {filterLabel}</label>
+      <input
+        id="cari-rute"
+        type="search"
+        inputmode="search"
+        autocomplete="off"
+        placeholder={`Nama atau kode kantor ${filterLabel}`}
+        data-filter-input
+      />
+    </div>
+    <div class="service-picker">
+      <label for="pilih-layanan">Jenis kiriman</label>
+      <select id="pilih-layanan" data-service-select>
+        {SERVICE_DEFINITIONS.map((service, index) => (
+          <option value={service.key} selected={index === 0}>
+            {service.label}
+          </option>
+        ))}
+      </select>
+    </div>
+    <p class="result-count" aria-live="polite" data-result-count>
+      {rates.length.toLocaleString("id-ID")} rute
+    </p>
+  </div>
+
+  <noscript>
+    <p class="notice">
+      JavaScript tidak aktif. Semua jenis kiriman tetap tersedia; geser tabel ke samping
+      untuk membacanya.
+    </p>
+  </noscript>
+
+  <div class="table-scroll" tabindex="0" aria-label="Tabel tarif dapat digeser ke samping">
+    <table class="rate-table" data-rate-table data-column="2">
+      <caption>
+        Tarif {isFrom ? "dari" : "ke"} {location.sourceName} untuk semua wilayah/kantor
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">{counterpartLabel}</th>
+          {SERVICE_DEFINITIONS.map((service) => (
+            <th
+              scope="col"
+              data-service={service.key}
+              title={service.description}
+            >
+              {service.label}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody data-filter-list>
+        {rates.map((rate) => {
+          const counterpart = rate.counterpart;
+          const oppositeIndexUrl = isFrom
+            ? `../../ke/${counterpart.slug}/#dari-${location.officeId}`
+            : `../../dari/${counterpart.slug}/#ke-${location.officeId}`;
+          const reverseUrl = isFrom
+            ? `../${counterpart.slug}/#ke-${location.officeId}`
+            : `../${counterpart.slug}/#dari-${location.officeId}`;
+
+          return (
+            <tr
+              id={`${rowPrefix}-${counterpart.officeId}`}
+            >
+              <th scope="row">
+                <a href={oppositeIndexUrl}>{counterpart.sourceName}</a>
+                <small>
+                  {counterpart.officeId} ·
+                  <a href={reverseUrl}>balik arah</a>
+                </small>
+              </th>
+              {SERVICE_DEFINITIONS.map((service) => (
+                <td>{formatTariff(service.key, rate[service.key])}</td>
+              ))}
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  </div>
+  <p class="empty-state" data-empty-state hidden>Tidak ada rute yang cocok.</p>
+</section>

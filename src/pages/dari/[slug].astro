@@ -1,0 +1,20 @@
+---
+import RatePage from "../../components/RatePage.astro";
+import { getLocations, getRatesFrom, type Location } from "../../lib/database";
+
+export function getStaticPaths() {
+  return getLocations().map((location) => ({
+    params: { slug: location.slug },
+    props: { location },
+  }));
+}
+
+interface Props {
+  location: Location;
+}
+
+const { location } = Astro.props;
+const rates = getRatesFrom(location.officeId);
+---
+
+<RatePage location={location} rates={rates} direction="from" />

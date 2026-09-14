@@ -1,0 +1,37 @@
+# Dokumen sumber berukuran besar; unduh secara lokal saat regenerasi data.
+Kepmen Kominfo No. 222 Tahun 2022 ttg Besaran Tarif LPU (Lengkap).pdf
+
+# Astro / Node.js
+node_modules/
+dist/
+.astro/
+.npm/
+npm-debug.log*
+
+# Hasil pengujian peramban
+playwright-report/
+test-results/
+coverage/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Cache dan berkas sementara ekstraksi. Artefak final di data/ tetap dilacak Git.
+data/.extract-cache/
+data/.build-*/
+data/*.tmp
+data/.*.tmp
+data/*.sqlite-journal
+data/*.sqlite-shm
+data/*.sqlite-wal
+
+# Konfigurasi lokal
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log

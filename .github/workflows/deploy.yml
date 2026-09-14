@@ -1,0 +1,97 @@
+name: Deploy to GitHub Pages
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Pages artifact
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+
+      - name: Validate committed data
+        run: python scripts/validate_data.py --data-dir data
+
+      - name: Resolve public URL and base path
+        env:
+          CONFIGURED_SITE_URL: ${{ vars.SITE_URL }}
+          CONFIGURED_BASE_PATH: ${{ vars.BASE_PATH }}
+        shell: bash
+        run: |
+          repository_name="${GITHUB_REPOSITORY#*/}"
+          site_url="${CONFIGURED_SITE_URL%/}"
+          base_path="$CONFIGURED_BASE_PATH"
+
+          if [[ -z "$site_url" ]]; then
+            site_url="https://${GITHUB_REPOSITORY_OWNER}.github.io"
+          fi
+
+          if [[ -z "$base_path" ]]; then
+            if [[ "${repository_name,,}" == "${GITHUB_REPOSITORY_OWNER,,}.github.io" ]]; then
+              base_path="/"
+            else
+              base_path="/$repository_name"
+            fi
+          elif [[ "$base_path" != /* ]]; then
+            base_path="/$base_path"
+          fi
+
+          if [[ "$base_path" != "/" ]]; then
+            base_path="${base_path%/}"
+          fi
+
+          {
+            echo "SITE_URL=$site_url"
+            echo "BASE_PATH=$base_path"
+          } >> "$GITHUB_ENV"
+
+          echo "Membangun $site_url$base_path"
+
+      - name: Install, build, and upload Astro site
+        # CI already enforces the eight-minute build budget. This action also
+        # installs dependencies and uploads ~250 MiB, so its timeout includes
+        # deliberate transfer margin.
+        timeout-minutes: 15
+        uses: withastro/action@v6
+        with:
+          node-version: "24"
+          build-cmd: npm run build && python scripts/check_dist.py --dist dist --base "$BASE_PATH"
+
+  deploy:
+    name: Publish GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy artifact
+        id: deployment
+        uses: actions/deploy-pages@v5

@@ -1,0 +1,47 @@
+---
+import { getDatabaseStats } from "../lib/database";
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const stats = getDatabaseStats();
+---
+
+<BaseLayout
+  title="Tentang data"
+  description="Sumber, cara pengolahan, dan batasan basis data tarif PostIndo."
+>
+  <article class="prose">
+    <header class="page-heading">
+      <p class="eyebrow">Tentang PostIndo</p>
+      <h1>Sumber dan batasan data</h1>
+      <p>
+        Situs ringan ini mengubah lampiran tarif domestik yang sangat panjang menjadi indeks
+        yang dapat dicari dari telepon genggam.
+      </p>
+    </header>
+
+    <h2>Sumber resmi</h2>
+    <p>
+      Data berasal dari lampiran domestik
+      <a href="https://jdih.komdigi.go.id/produk_hukum/view/id/803/t/keputusan%2Bmenteri%2Bkomunikasi%2Bdan%2Binformatika%2Bnomor%2B222%2Btahun%2B2022">
+        Keputusan Menteri Komunikasi dan Informatika Nomor 222 Tahun 2022
+      </a>. Basis data berisi {stats.rates.toLocaleString("id-ID")} rute berarah antara
+      {stats.locations.toLocaleString("id-ID")} wilayah/kantor dan
+      {stats.kprk.toLocaleString("id-ID")} KPRK.
+    </p>
+
+    <h2>Cara membaca</h2>
+    <p>
+      Nama wilayah/kantor dipertahankan sebagaimana tertulis dalam keputusan. Nilai adalah
+      tarif per kelompok berat yang diterbitkan, bukan hasil interpolasi berat dan bukan
+      penawaran komersial Pos Indonesia. Sekogram bernilai nol ditulis sebagai
+      <q>Bebas Biaya</q> sesuai makna sumber.
+    </p>
+
+    <h2>Batasan</h2>
+    <p>
+      Lampiran tarif internasional dan halaman rumus hasil pindai tidak disertakan. Status,
+      ketentuan, atau tarif dapat berubah; periksa kembali dokumen dan layanan resmi sebelum
+      mengandalkan suatu nilai.
+    </p>
+  </article>
+</BaseLayout>

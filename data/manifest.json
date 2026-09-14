@@ -1,0 +1,39 @@
+{
+  "artifacts": {
+    "locations.csv": {
+      "bytes": 24409,
+      "path": "locations.csv",
+      "sha256": "067aa5dcb5bfc93e3da6997b5f25c6a11a3ac773ac0bd541165d82faecdd33ec"
+    },
+    "postindo.sqlite": {
+      "bytes": 41541632,
+      "path": "postindo.sqlite",
+      "sha256": "40dc259e1769d4081619af5725fd6b929a2a241b5f064173761b6b17c9a153f4"
+    },
+    "rates.csv": {
+      "bytes": 29745694,
+      "path": "rates.csv",
+      "sha256": "8875982d5e29364b1c12811b6844195f2c6578903ed151bab4fdaccd48818400"
+    }
+  },
+  "counts": {
+    "alphanumeric_office_ids": 27,
+    "kprk_ids": 205,
+    "locations": 603,
+    "rates": 363609,
+    "self_routes": 603
+  },
+  "extractor_version": "1.0.0",
+  "generated_at": "2026-09-14T16:50:32Z",
+  "schema_version": "1.0.0",
+  "source": {
+    "bytes": 136198076,
+    "domestic_pdf_pages": {
+      "first": 4,
+      "last": 20197
+    },
+    "filename": "Kepmen Kominfo No. 222 Tahun 2022 ttg Besaran Tarif LPU (Lengkap).pdf",
+    "pdf_pages": 20210,
+    "sha256": "811d1fb3ac805f172ea7f2d922cc1915b05c63226023bb9c68fc71a66c39bf3d"
+  }
+}

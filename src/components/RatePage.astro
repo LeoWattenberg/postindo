@@ -1,0 +1,36 @@
+---
+import type { Location, RouteRate } from "../lib/database";
+import { sitePath } from "../lib/paths";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import RateTable from "./RateTable.astro";
+
+interface Props {
+  location: Location;
+  rates: RouteRate[];
+  direction: "from" | "to";
+}
+
+const { location, rates, direction } = Astro.props;
+const isFrom = direction === "from";
+const directionWord = isFrom ? "dari" : "ke";
+const directoryUrl = sitePath(isFrom ? "/dari/" : "/ke/");
+const title = `Tarif ${directionWord} ${location.sourceName}`;
+const description = `${rates.length} tarif Layanan Pos Universal ${directionWord} ${location.sourceName}, kantor ${location.officeId}.`;
+---
+
+<BaseLayout title={title} description={description}>
+  <nav class="breadcrumbs" aria-label="Jejak navigasi">
+    <a href={sitePath("/")}>Beranda</a>
+    <span aria-hidden="true">/</span>
+    <a href={directoryUrl}>{isFrom ? "Dari wilayah" : "Ke wilayah"}</a>
+  </nav>
+  <header class="page-heading">
+    <p class="eyebrow">Kantor {location.officeId} · KPRK {location.kprkId}</p>
+    <h1>Tarif {directionWord} {location.sourceName}</h1>
+    <p>
+      Pilih jenis kiriman dan cari {isFrom ? "tujuan" : "asal"}. Nilai berikut adalah
+      tarif yang diterbitkan dalam Kepmen Kominfo Nomor 222 Tahun 2022.
+    </p>
+  </header>
+  <RateTable location={location} rates={rates} direction={direction} />
+</BaseLayout>

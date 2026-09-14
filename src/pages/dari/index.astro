@@ -1,0 +1,19 @@
+---
+import DirectoryList from "../../components/DirectoryList.astro";
+import { getLocations } from "../../lib/database";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const locations = getLocations();
+---
+
+<BaseLayout
+  title="Tarif dari wilayah"
+  description="Pilih wilayah atau kantor asal untuk melihat tarif pos ke seluruh Indonesia."
+>
+  <header class="page-heading">
+    <p class="eyebrow">Indeks asal</p>
+    <h1>Tarif dari wilayah/kantor</h1>
+    <p>Pilih satu asal untuk melihat tarif menuju seluruh {locations.length} wilayah/kantor.</p>
+  </header>
+  <DirectoryList locations={locations} direction="dari" />
+</BaseLayout>

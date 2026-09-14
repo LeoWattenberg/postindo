@@ -1,0 +1,49 @@
+---
+import type { Location } from "../lib/database";
+import { sitePath } from "../lib/paths";
+
+interface Props {
+  locations: Location[];
+  direction: "dari" | "ke";
+}
+
+const { locations, direction } = Astro.props;
+const inputId = `cari-${direction}`;
+const directionLabel = direction === "dari" ? "asal" : "tujuan";
+---
+
+<section class="filter-section" data-filter-root>
+  <noscript>
+    <p class="notice">
+      Pencarian memerlukan JavaScript. Semua wilayah/kantor tetap tersedia dalam daftar.
+    </p>
+  </noscript>
+  <div class="filter-bar">
+    <label for={inputId}>Cari wilayah/kantor {directionLabel}</label>
+    <input
+      id={inputId}
+      type="search"
+      inputmode="search"
+      autocomplete="off"
+      placeholder="Nama wilayah atau kode kantor"
+      data-filter-input
+    />
+    <p class="result-count" aria-live="polite" data-result-count>
+      {locations.length.toLocaleString("id-ID")} wilayah/kantor
+    </p>
+  </div>
+
+  <ul class="location-grid" data-filter-list>
+    {locations.map((location) => (
+      <li>
+        <a href={sitePath(`/${direction}/${location.slug}/`)}>
+          <strong>{location.sourceName}</strong>
+          <span>Kantor {location.officeId} · KPRK {location.kprkId}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+  <p class="empty-state" data-empty-state hidden>
+    Tidak ada wilayah/kantor yang cocok.
+  </p>
+</section>

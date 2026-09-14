@@ -1,0 +1,51 @@
+---
+import { sitePath } from "../lib/paths";
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description: string;
+}
+
+const { title, description } = Astro.props;
+const pageTitle = title === "PostIndo" ? title : `${title} | PostIndo`;
+const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site) : undefined;
+---
+
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="theme-color" content="#a5382b" />
+    <title>{pageTitle}</title>
+    {canonical && <link rel="canonical" href={canonical} />}
+  </head>
+  <body>
+    <a class="skip-link" href="#konten">Lewati ke konten utama</a>
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="brand" href={sitePath("/")} aria-label="PostIndo, beranda">
+          <span aria-hidden="true">PI</span>
+          PostIndo
+        </a>
+        <nav aria-label="Navigasi utama">
+          <a href={sitePath("/dari/")}>Dari wilayah</a>
+          <a href={sitePath("/ke/")}>Ke wilayah</a>
+          <a href={sitePath("/tentang/")}>Tentang</a>
+        </nav>
+      </div>
+    </header>
+    <main id="konten" class="shell">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="shell footer-inner">
+        <p>Data tarif Layanan Pos Universal, bukan kalkulator ongkir komersial.</p>
+        <a href={sitePath("/tentang/")}>Sumber dan batasan data</a>
+      </div>
+    </footer>
+    <script src="../scripts/site.ts"></script>
+  </body>
+</html>

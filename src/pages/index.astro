@@ -1,0 +1,82 @@
+---
+import { getLocations } from "../lib/database";
+import { sitePath } from "../lib/paths";
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const locations = getLocations();
+---
+
+<BaseLayout
+  title="PostIndo"
+  description="Cari tarif Layanan Pos Universal dari dan ke 603 wilayah/kantor di Indonesia."
+>
+  <section class="hero">
+    <p class="eyebrow">Tarif pos domestik</p>
+    <h1>Cari tarif pos antardaerah tanpa membolak-balik PDF</h1>
+    <p>
+      Pilih kantor asal dan tujuan untuk langsung membuka rute dalam daftar resmi.
+    </p>
+  </section>
+
+  <form class="route-finder" action={sitePath("/dari/")} data-route-finder>
+    <div>
+      <label for="asal">Dari wilayah/kantor</label>
+      <select id="asal" name="asal" required data-origin-select>
+        <option value="">Pilih asal</option>
+        {locations.map((location) => (
+          <option
+            value={sitePath(`/dari/${location.slug}/`)}
+            data-office-id={location.officeId}
+          >
+            {location.sourceName} ({location.officeId})
+          </option>
+        ))}
+      </select>
+    </div>
+    <div>
+      <label for="tujuan">Ke wilayah/kantor</label>
+      <select id="tujuan" name="tujuan" required data-destination-select>
+        <option value="">Pilih tujuan</option>
+        {locations.map((location) => (
+          <option
+            value={sitePath(`/ke/${location.slug}/`)}
+            data-office-id={location.officeId}
+          >
+            {location.sourceName} ({location.officeId})
+          </option>
+        ))}
+      </select>
+    </div>
+    <p class="form-error" data-route-finder-error hidden>
+      Pilih kantor asal dan tujuan terlebih dahulu.
+    </p>
+    <div class="finder-actions">
+      <button type="submit" name="arah" value="dari">Lihat dari asal</button>
+      <button class="button-secondary" type="submit" name="arah" value="ke">
+        Lihat dari tujuan
+      </button>
+    </div>
+  </form>
+
+  <noscript>
+    <p class="notice">
+      Pencari rute memerlukan JavaScript. Anda tetap dapat membuka
+      <a href={sitePath("/dari/")}>daftar wilayah asal</a> atau
+      <a href={sitePath("/ke/")}>daftar wilayah tujuan</a>.
+    </p>
+  </noscript>
+
+  <section class="home-links" aria-labelledby="jelajahi">
+    <h2 id="jelajahi">Jelajahi semua tarif</h2>
+    <div class="card-grid">
+      <a class="feature-card" href={sitePath("/dari/")}>
+        <strong>Tarif dari suatu wilayah</strong>
+        <span>Pilih asal, lalu bandingkan tarif ke semua tujuan.</span>
+      </a>
+      <a class="feature-card" href={sitePath("/ke/")}>
+        <strong>Tarif ke suatu wilayah</strong>
+        <span>Pilih tujuan, lalu lihat tarif dari semua asal.</span>
+      </a>
+    </div>
+  </section>
+</BaseLayout>

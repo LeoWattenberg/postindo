@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Data, tests, and static site
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SITE_URL: https://example.invalid
+      BASE_PATH: /postindo
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install Python dependencies
+        run: python -m pip install --requirement requirements.txt
+
+      - name: Install Node.js dependencies
+        run: npm ci
+
+      - name: Validate committed data
+        run: python scripts/validate_data.py --data-dir data
+
+      - name: Run Python parser tests
+        run: python -m unittest discover -s tests/python -v
+
+      - name: Run static checks
+        run: npm run check
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Build static site
+        timeout-minutes: 8
+        run: npm run build
+
+      - name: Check routes, links, and size budgets
+        run: python scripts/check_dist.py --dist dist --base "$BASE_PATH"
+
+      - name: Install Chromium
+        timeout-minutes: 5
+        run: npx playwright install --with-deps chromium
+
+      - name: Run mobile browser tests
+        timeout-minutes: 8
+        run: npm run test:e2e
