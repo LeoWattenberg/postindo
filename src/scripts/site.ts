@@ -5,6 +5,22 @@ const normalize = (value: string): string =>
     .toLocaleLowerCase("id-ID")
     .replace(/[^a-z0-9]/g, "");
 
+const finder = document.querySelector<HTMLFormElement>("[data-route-finder]");
+const originSelect = finder?.querySelector<HTMLSelectElement>("[data-origin-select]");
+const destinationSelect = finder?.querySelector<HTMLSelectElement>("[data-destination-select]");
+
+// Send the office list once, then populate the destination before enhancing either picker.
+if (originSelect && destinationSelect) {
+  const options = document.createDocumentFragment();
+  for (const option of originSelect.options) {
+    if (!option.value) continue;
+    const destinationOption = option.cloneNode(true) as HTMLOptionElement;
+    destinationOption.value = option.value.replace(/\/dari\/([^/]+)\/$/, "/ke/$1/");
+    options.append(destinationOption);
+  }
+  destinationSelect.append(options);
+}
+
 for (const root of document.querySelectorAll<HTMLElement>("[data-searchable-select]")) {
   const select = root.querySelector<HTMLSelectElement>("select");
   const label = root.querySelector<HTMLLabelElement>("label");
@@ -219,7 +235,6 @@ for (const controls of document.querySelectorAll<HTMLElement>("[data-rate-contro
   select.addEventListener("change", showService);
 }
 
-const finder = document.querySelector<HTMLFormElement>("[data-route-finder]");
 if (finder) {
   finder.addEventListener("submit", (event) => {
     event.preventDefault();

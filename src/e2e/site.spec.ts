@@ -97,14 +97,21 @@ test("menemukan rute dengan layanan pilihan dan membuka indeks sebaliknya", asyn
 });
 
 test("dropdown beranda berurutan abjad dan bisa dicari tanpa kehilangan pilihan", async ({ page }) => {
-  await page.goto("./");
+  const response = await page.goto("./");
+  const html = await response!.text();
+  // Only one office list crosses the network; both pickers still offer every office.
+  expect(html.match(/data-office-id=/g)).toHaveLength(603);
   for (const selector of ["[data-origin-select]", "[data-destination-select]"]) {
+    await expect(page.locator(`${selector} option[data-office-id]`)).toHaveCount(603);
     const names = await page.locator(`${selector} option[data-office-id]`).allTextContents();
     const trimmed = names.map((name) => name.trim());
     expect(trimmed).toEqual([...trimmed].sort((a, b) =>
       a.localeCompare(b, "id-ID", { sensitivity: "base" }),
     ));
   }
+  const destinationUrls = await page.locator("[data-destination-select] option[data-office-id]")
+    .evaluateAll((options) => options.map((option) => (option as HTMLOptionElement).value));
+  for (const url of destinationUrls) expect(url).toMatch(/\/postindo\/ke\/[^/]+\/$/);
 
   const input = page.getByRole("combobox", { name: "Dari wilayah/kantor" });
   const options = page.locator("#asal-options [role=option]");

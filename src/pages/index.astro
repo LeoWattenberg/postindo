@@ -41,14 +41,6 @@ const locations = getLocations().sort((a, b) =>
       <label for="tujuan">Ke wilayah/kantor</label>
       <select id="tujuan" name="tujuan" required data-destination-select>
         <option value="">Pilih tujuan</option>
-        {locations.map((location) => (
-          <option
-            value={sitePath(`/ke/${location.slug}/`)}
-            data-office-id={location.officeId}
-          >
-            {location.sourceName} ({location.officeId})
-          </option>
-        ))}
       </select>
     </div>
     <div class="searchable-select" data-searchable-select>
