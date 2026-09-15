@@ -26,11 +26,19 @@ test("menemukan rute dengan layanan pilihan dan membuka indeks sebaliknya", asyn
   expect(originId).toBeTruthy();
   expect(destinationId).toBeTruthy();
 
-  await page.locator("[data-origin-select]").selectOption({ index: 1 });
-  await page.locator("[data-destination-select]").selectOption({ index: 2 });
+  const originInput = page.getByRole("combobox", { name: "Dari wilayah/kantor" });
+  await originInput.fill(originId ?? "");
+  await originInput.press("ArrowDown");
+  await originInput.press("Enter");
+  const destinationInput = page.getByRole("combobox", { name: "Ke wilayah/kantor" });
+  await destinationInput.fill(destinationId ?? "");
+  await page.locator("#tujuan-options [role=option]:visible").first().click();
   const homeServiceSelect = page.locator("[data-route-service-select]");
   await expect(homeServiceSelect.locator("option")).toHaveCount(10);
-  await homeServiceSelect.selectOption("letter_over_100g_to_250g");
+  const serviceInput = page.getByRole("combobox", { name: "Jenis/berat kiriman" });
+  await serviceInput.fill("100 250");
+  await serviceInput.press("ArrowDown");
+  await serviceInput.press("Enter");
   await expect(page.getByRole("button", { name: "Lihat dari tujuan" })).toHaveCount(0);
   await page.getByRole("button", { name: "Lihat dari asal" }).click();
 
@@ -86,6 +94,49 @@ test("menemukan rute dengan layanan pilihan dan membuka indeks sebaliknya", asyn
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   );
   expect(bodyOverflows).toBe(false);
+});
+
+test("dropdown beranda berurutan abjad dan bisa dicari tanpa kehilangan pilihan", async ({ page }) => {
+  await page.goto("./");
+  for (const selector of ["[data-origin-select]", "[data-destination-select]"]) {
+    const names = await page.locator(`${selector} option[data-office-id]`).allTextContents();
+    const trimmed = names.map((name) => name.trim());
+    expect(trimmed).toEqual([...trimmed].sort((a, b) =>
+      a.localeCompare(b, "id-ID", { sensitivity: "base" }),
+    ));
+  }
+
+  const input = page.getByRole("combobox", { name: "Dari wilayah/kantor" });
+  const options = page.locator("#asal-options [role=option]");
+  const firstName = (await options.first().innerText()).trim();
+  await input.fill(firstName.toLocaleLowerCase("id-ID").split("").join(". "));
+  await expect(page.locator("#asal-options [role=option]:visible")).toHaveCount(1);
+  await input.press("ArrowDown");
+  await expect(input).toHaveAttribute("aria-activedescendant", "asal-option-0");
+  await input.press("Enter");
+  await expect(input).toHaveValue(firstName);
+  await expect(input).toHaveAttribute("aria-expanded", "false");
+  const chosen = await page.locator("[data-origin-select]").inputValue();
+
+  await input.fill("zzzz tidak cocok");
+  await expect(page.locator(".select-empty:visible")).toHaveText("Tidak ada pilihan yang cocok.");
+  await expect(input).not.toHaveAttribute("aria-activedescendant");
+  await input.press("Enter");
+  await expect(page).toHaveURL(/\/postindo\/$/);
+  await input.press("Escape");
+  await expect(input).toHaveValue(firstName);
+  await expect(page.locator("[data-origin-select]")).toHaveValue(chosen);
+
+  await input.click();
+  await expect(page.locator("#asal-options [role=option]:visible")).toHaveCount(await options.count());
+  await input.press("ArrowUp");
+  await input.press("Home");
+  await input.press("Enter");
+  await expect(input).toHaveValue(firstName);
+  await input.fill("zzzz");
+  await input.press("Tab");
+  await expect(input).toHaveValue(firstName);
+  await expect(page.locator("[data-origin-select]")).toHaveValue(chosen);
 });
 
 test("mencari tujuan dan membaca mata uang tarif internasional", async ({ page }) => {

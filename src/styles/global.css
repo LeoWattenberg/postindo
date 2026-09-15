@@ -216,6 +216,61 @@ button:hover {
   gap: 0.65rem;
 }
 
+.searchable-select {
+  position: relative;
+  min-width: 0;
+}
+
+.searchable-select input {
+  padding-right: 2rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%236b6259' stroke-width='2'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+}
+
+.select-panel {
+  position: absolute;
+  z-index: 5;
+  top: 100%;
+  width: 100%;
+  max-height: 18rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-top: 0.25rem;
+  border: 1px solid var(--line);
+  border-radius: 0.45rem;
+  background: var(--surface);
+  box-shadow: 0 0.4rem 1.5rem rgb(69 52 36 / 12%);
+}
+
+.select-panel ul {
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+}
+
+.select-panel [role="option"] {
+  padding: 0.55rem 0.7rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.select-panel [role="option"]:hover,
+.select-panel .is-active {
+  background: var(--accent-soft);
+}
+
+.select-panel [aria-selected="true"] {
+  font-weight: 750;
+}
+
+.select-empty {
+  margin: 0;
+  padding: 0.75rem;
+  color: var(--muted);
+}
+
 .form-error {
   margin: 0;
   color: #8b1e16;

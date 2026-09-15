@@ -4,7 +4,10 @@ import { sitePath } from "../lib/paths";
 import { SERVICE_DEFINITIONS } from "../lib/rates";
 import BaseLayout from "../layouts/BaseLayout.astro";
 
-const locations = getLocations();
+const locations = getLocations().sort((a, b) =>
+  a.sourceName.localeCompare(b.sourceName, "id-ID", { sensitivity: "base" })
+  || a.officeId.localeCompare(b.officeId, "id-ID", { numeric: true }),
+);
 ---
 
 <BaseLayout
@@ -20,7 +23,7 @@ const locations = getLocations();
   </section>
 
   <form class="route-finder" action={sitePath("/dari/")} data-route-finder>
-    <div>
+    <div class="searchable-select" data-searchable-select>
       <label for="asal">Dari wilayah/kantor</label>
       <select id="asal" name="asal" required data-origin-select>
         <option value="">Pilih asal</option>
@@ -34,7 +37,7 @@ const locations = getLocations();
         ))}
       </select>
     </div>
-    <div>
+    <div class="searchable-select" data-searchable-select>
       <label for="tujuan">Ke wilayah/kantor</label>
       <select id="tujuan" name="tujuan" required data-destination-select>
         <option value="">Pilih tujuan</option>
@@ -48,7 +51,7 @@ const locations = getLocations();
         ))}
       </select>
     </div>
-    <div>
+    <div class="searchable-select" data-searchable-select>
       <label for="layanan">Jenis/berat kiriman</label>
       <select id="layanan" name="layanan" data-route-service-select>
         {SERVICE_DEFINITIONS.map((service, index) => (
